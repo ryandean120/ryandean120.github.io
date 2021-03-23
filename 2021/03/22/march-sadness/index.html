@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.81.0" />
+
+
+<title>March Sadness - Ryan Dean&#39;s Github Site</title>
+<meta property="og:title" content="March Sadness - Ryan Dean&#39;s Github Site">
+
+
+  <link href='/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/logo.png"
+         width="50"
+         height="50"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/ryandean120/ryandean120.github.io">GitHub</a></li>
+    
+    <li><a href="https://twitter.com/ryandeandesigns">Twitter</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">15 min read</span>
+    
+
+    <h1 class="article-title">March Sadness</h1>
+
+    
+    <span class="article-date">2021-03-22</span>
+    
+
+    <div class="article-content">
+      
+<script src="/2021/03/22/march-sadness/index_files/header-attrs/header-attrs.js"></script>
+<script src="/2021/03/22/march-sadness/index_files/kePrint/kePrint.js"></script>
+<link href="/2021/03/22/march-sadness/index_files/lightable/lightable.css" rel="stylesheet" />
+
+
+<p>If you’ve ever filled out a March Madness bracket, you can truly understand the realest definition of pain, insert Steven A. Smith “Pain” image here.</p>
+<p>This year however we are going in with a predictive method as to who is going to win. There is no guarentee that the method will prevail and more likely than not, it won’t. If I were able to perfectly predict every game and happen to win the million dollar prize I WILL be naming a classroom after myself.</p>
+<pre class="r"><code>library(tidyverse)</code></pre>
+<pre><code>## ── Attaching packages ─────────────────────────────────────── tidyverse 1.3.0 ──</code></pre>
+<pre><code>## ✓ ggplot2 3.3.3     ✓ purrr   0.3.4
+## ✓ tibble  3.0.5     ✓ dplyr   1.0.3
+## ✓ tidyr   1.1.2     ✓ stringr 1.4.0
+## ✓ readr   1.4.0     ✓ forcats 0.5.0</code></pre>
+<pre><code>## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## x dplyr::filter() masks stats::filter()
+## x dplyr::lag()    masks stats::lag()</code></pre>
+<pre class="r"><code>library(tidymodels)</code></pre>
+<pre><code>## ── Attaching packages ────────────────────────────────────── tidymodels 0.1.2 ──</code></pre>
+<pre><code>## ✓ broom     0.7.3      ✓ recipes   0.1.15
+## ✓ dials     0.0.9      ✓ rsample   0.0.8 
+## ✓ infer     0.5.4      ✓ tune      0.1.2 
+## ✓ modeldata 0.1.0      ✓ workflows 0.2.1 
+## ✓ parsnip   0.1.5      ✓ yardstick 0.0.7</code></pre>
+<pre><code>## ── Conflicts ───────────────────────────────────────── tidymodels_conflicts() ──
+## x scales::discard() masks purrr::discard()
+## x dplyr::filter()   masks stats::filter()
+## x recipes::fixed()  masks stringr::fixed()
+## x dplyr::lag()      masks stats::lag()
+## x yardstick::spec() masks readr::spec()
+## x recipes::step()   masks stats::step()</code></pre>
+<pre class="r"><code>library(zoo)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;zoo&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     as.Date, as.Date.numeric</code></pre>
+<pre class="r"><code>library(kableExtra)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;kableExtra&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
+## 
+##     group_rows</code></pre>
+<pre class="r"><code>set.seed(1234)
+
+require(doParallel)</code></pre>
+<pre><code>## Loading required package: doParallel</code></pre>
+<pre><code>## Loading required package: foreach</code></pre>
+<pre><code>## 
+## Attaching package: &#39;foreach&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:purrr&#39;:
+## 
+##     accumulate, when</code></pre>
+<pre><code>## Loading required package: iterators</code></pre>
+<pre><code>## Loading required package: parallel</code></pre>
+<pre class="r"><code>cores &lt;- parallel::detectCores(logical = FALSE)</code></pre>
+<p>In order to do anything we had to install all of our libraries as well as tell our laptop to use all cores at the same time. We will be using an xgboost model which will make our laptop hover over our desk like a helicopter.</p>
+<pre class="r"><code>games &lt;- read_csv(&quot;cbblogs1521.csv&quot;)</code></pre>
+<pre><code>## 
+## ── Column specification ────────────────────────────────────────────────────────
+## cols(
+##   .default = col_double(),
+##   Season = col_character(),
+##   Date = col_date(format = &quot;&quot;),
+##   TeamFull = col_character(),
+##   Opponent = col_character(),
+##   HomeAway = col_character(),
+##   W_L = col_character(),
+##   URL = col_character(),
+##   Conference = col_character(),
+##   Team = col_character()
+## )
+## ℹ Use `spec()` for the full column specifications.</code></pre>
+<p>I have decided that with my lengthy knowledge of college basketball, there are three predictors that I feel best show how good a team is, Offensive Net Rating, Defensive Net Rating, and an assist to turnover ration which can be considered and attributed to the guard play.</p>
+<pre class="r"><code>games &lt;- read_csv(&quot;cbblogs1521.csv&quot;) %&gt;% mutate(
+  Possessions = .5*(TeamFGA - TeamOffRebounds + TeamTurnovers + (.475 * TeamFTA)) + .5*(OpponentFGA - OpponentOffRebounds + OpponentTurnovers + (.475 * OpponentFTA)),
+  OffensiveRating = (TeamScore/Possessions)*100, 
+  DefensiveRating = (OpponentScore/Possessions)*100,
+  GuardPlay = (TeamAssists/TeamTurnovers)
+  ) %&gt;%
+  group_by(Team, Season) %&gt;%
+  mutate(
+  Cumulative_Guards = cummean(GuardPlay),
+  Cumulative_Mean_Offensive = cummean(OffensiveRating),
+  Cumulative_Mean_Defensive = cummean(DefensiveRating)
+  ) %&gt;% filter(between(Game, max(Game)-10, max(Game))) %&gt;% ungroup() %&gt;% 
+  mutate(
+    Location = case_when(
+    str_trim(HomeAway) == &quot;@&quot; ~ &quot;A&quot;,
+    str_trim(HomeAway) == &quot;N&quot; ~ &quot;N&quot;,
+    TRUE ~ &quot;H&quot;
+  ),
+ Outcome = case_when(
+  grepl(&quot;W&quot;, W_L) ~ &quot;W&quot;, 
+  grepl(&quot;L&quot;, W_L) ~ &quot;L&quot;
+ )
+) %&gt;%
+  mutate(Outcome = as.factor(Outcome)) </code></pre>
+<pre><code>## 
+## ── Column specification ────────────────────────────────────────────────────────
+## cols(
+##   .default = col_double(),
+##   Season = col_character(),
+##   Date = col_date(format = &quot;&quot;),
+##   TeamFull = col_character(),
+##   Opponent = col_character(),
+##   HomeAway = col_character(),
+##   W_L = col_character(),
+##   URL = col_character(),
+##   Conference = col_character(),
+##   Team = col_character()
+## )
+## ℹ Use `spec()` for the full column specifications.</code></pre>
+<pre class="r"><code>selectedgames &lt;- games %&gt;% select(Season, Team, Date, Opponent, Outcome, Cumulative_Mean_Offensive, Cumulative_Mean_Defensive, Cumulative_Guards, TeamSRS, TeamSOS)</code></pre>
+<pre class="r"><code>opponentgames &lt;- selectedgames %&gt;% select(-Opponent) %&gt;% rename(Opponent = Team, Opponent_Cumulative_Offensive = Cumulative_Mean_Offensive, Opponent_Cumulative_Mean_Defensive = Cumulative_Mean_Defensive, Opponent_Cumulative_Guards = Cumulative_Guards, OpponentSRS = TeamSRS, OpponentSOS = TeamSOS)</code></pre>
+<pre class="r"><code>bothsides &lt;- selectedgames %&gt;% left_join(opponentgames, by=c(&quot;Opponent&quot;, &quot;Date&quot;, &quot;Season&quot;)) %&gt;% na.omit() %&gt;% select(-Outcome.y) %&gt;% rename(Outcome = Outcome.x)</code></pre>
+<pre class="r"><code>bracket_split &lt;- initial_split(bothsides, prop = .8)
+bracket_train &lt;- training(bracket_split)
+bracket_test &lt;- testing(bracket_split)</code></pre>
+<pre class="r"><code>xg_rec &lt;- 
+  recipe(Outcome ~ ., data = bracket_train) %&gt;%
+  update_role(Team, Opponent, Date, Season, new_role = &quot;ID&quot;)
+
+summary(xg_rec)</code></pre>
+<pre><code>## # A tibble: 15 x 4
+##    variable                           type    role      source  
+##    &lt;chr&gt;                              &lt;chr&gt;   &lt;chr&gt;     &lt;chr&gt;   
+##  1 Season                             nominal ID        original
+##  2 Team                               nominal ID        original
+##  3 Date                               date    ID        original
+##  4 Opponent                           nominal ID        original
+##  5 Cumulative_Mean_Offensive          numeric predictor original
+##  6 Cumulative_Mean_Defensive          numeric predictor original
+##  7 Cumulative_Guards                  numeric predictor original
+##  8 TeamSRS                            numeric predictor original
+##  9 TeamSOS                            numeric predictor original
+## 10 Opponent_Cumulative_Offensive      numeric predictor original
+## 11 Opponent_Cumulative_Mean_Defensive numeric predictor original
+## 12 Opponent_Cumulative_Guards         numeric predictor original
+## 13 OpponentSRS                        numeric predictor original
+## 14 OpponentSOS                        numeric predictor original
+## 15 Outcome                            nominal outcome   original</code></pre>
+<pre class="r"><code>xg_mod &lt;-   boost_tree(
+  trees = tune(), 
+  learn_rate = tune(),
+  tree_depth = tune(), 
+  min_n = tune(),
+  loss_reduction = tune(), 
+  sample_size = tune(), 
+  mtry = tune(), 
+  ) %&gt;% 
+  set_mode(&quot;classification&quot;) %&gt;% 
+  set_engine(&quot;xgboost&quot;, nthread = cores)</code></pre>
+<pre class="r"><code>bracket_wflow &lt;- 
+  workflow() %&gt;% 
+  add_model(xg_mod) %&gt;% 
+  add_recipe(xg_rec)</code></pre>
+<pre class="r"><code>xgb_grid &lt;- grid_latin_hypercube(
+  trees(),
+  tree_depth(),
+  min_n(),
+  loss_reduction(),
+  sample_size = sample_prop(),
+  finalize(mtry(), bracket_train),
+  learn_rate(),
+  size = 30
+)
+
+xgb_grid</code></pre>
+<pre><code>## # A tibble: 30 x 7
+##    trees tree_depth min_n loss_reduction sample_size  mtry   learn_rate
+##    &lt;int&gt;      &lt;int&gt; &lt;int&gt;          &lt;dbl&gt;       &lt;dbl&gt; &lt;int&gt;        &lt;dbl&gt;
+##  1  1252         14    18 0.00000000275        0.530    13 0.00000155  
+##  2  1064          2     2 0.00000292           0.920     3 0.0139      
+##  3    12         11    12 0.000000000690       0.372     2 0.0000000209
+##  4   197          1    23 0.0224               0.572    11 0.000246    
+##  5  1147          4    30 0.433                0.623     6 0.00000648  
+##  6  1439         13    27 0.000000111          0.957    11 0.0000351   
+##  7   819         12    16 0.000173             0.892     2 0.0000000642
+##  8   269          3    27 0.000000380          0.317     9 0.00000528  
+##  9   379          8    20 0.0000000167         0.128    15 0.000198    
+## 10   568         15    40 0.000000997          0.279     6 0.0000000335
+## # … with 20 more rows</code></pre>
+<pre class="r"><code>bracket_folds &lt;- vfold_cv(bracket_train)
+
+bracket_folds</code></pre>
+<pre><code>## #  10-fold cross-validation 
+## # A tibble: 10 x 2
+##    splits               id    
+##    &lt;list&gt;               &lt;chr&gt; 
+##  1 &lt;split [12.2K/1.4K]&gt; Fold01
+##  2 &lt;split [12.2K/1.4K]&gt; Fold02
+##  3 &lt;split [12.2K/1.4K]&gt; Fold03
+##  4 &lt;split [12.2K/1.4K]&gt; Fold04
+##  5 &lt;split [12.2K/1.4K]&gt; Fold05
+##  6 &lt;split [12.2K/1.4K]&gt; Fold06
+##  7 &lt;split [12.2K/1.4K]&gt; Fold07
+##  8 &lt;split [12.2K/1.4K]&gt; Fold08
+##  9 &lt;split [12.2K/1.4K]&gt; Fold09
+## 10 &lt;split [12.2K/1.4K]&gt; Fold10</code></pre>
+<pre class="r"><code>doParallel::registerDoParallel(cores = cores)
+
+xgb_res &lt;- tune_grid(
+  bracket_wflow,
+  resamples = bracket_folds,
+  grid = xgb_grid,
+  control = control_grid(save_pred = TRUE)
+)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;rlang&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:purrr&#39;:
+## 
+##     %@%, as_function, flatten, flatten_chr, flatten_dbl, flatten_int,
+##     flatten_lgl, flatten_raw, invoke, list_along, modify, prepend,
+##     splice</code></pre>
+<pre><code>## 
+## Attaching package: &#39;vctrs&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
+## 
+##     data_frame</code></pre>
+<pre><code>## The following object is masked from &#39;package:tibble&#39;:
+## 
+##     data_frame</code></pre>
+<pre><code>## 
+## Attaching package: &#39;xgboost&#39;</code></pre>
+<pre><code>## The following object is masked from &#39;package:dplyr&#39;:
+## 
+##     slice</code></pre>
+<pre class="r"><code>doParallel::stopImplicitCluster()
+
+xgb_res</code></pre>
+<pre><code>## # Tuning results
+## # 10-fold cross-validation 
+## # A tibble: 10 x 5
+##    splits             id    .metrics         .notes         .predictions        
+##    &lt;list&gt;             &lt;chr&gt; &lt;list&gt;           &lt;list&gt;         &lt;list&gt;              
+##  1 &lt;split [12.2K/1.4… Fold… &lt;tibble [60 × 1… &lt;tibble [0 × … &lt;tibble [40,650 × 1…
+##  2 &lt;split [12.2K/1.4… Fold… &lt;tibble [60 × 1… &lt;tibble [0 × … &lt;tibble [40,620 × 1…
+##  3 &lt;split [12.2K/1.4… Fold… &lt;tibble [60 × 1… &lt;tibble [0 × … &lt;tibble [40,620 × 1…
+##  4 &lt;split [12.2K/1.4… Fold… &lt;tibble [60 × 1… &lt;tibble [0 × … &lt;tibble [40,620 × 1…
+##  5 &lt;split [12.2K/1.4… Fold… &lt;tibble [60 × 1… &lt;tibble [0 × … &lt;tibble [40,620 × 1…
+##  6 &lt;split [12.2K/1.4… Fold… &lt;tibble [60 × 1… &lt;tibble [0 × … &lt;tibble [40,620 × 1…
+##  7 &lt;split [12.2K/1.4… Fold… &lt;tibble [60 × 1… &lt;tibble [0 × … &lt;tibble [40,620 × 1…
+##  8 &lt;split [12.2K/1.4… Fold… &lt;tibble [60 × 1… &lt;tibble [0 × … &lt;tibble [40,620 × 1…
+##  9 &lt;split [12.2K/1.4… Fold… &lt;tibble [60 × 1… &lt;tibble [0 × … &lt;tibble [40,620 × 1…
+## 10 &lt;split [12.2K/1.4… Fold… &lt;tibble [60 × 1… &lt;tibble [0 × … &lt;tibble [40,620 × 1…</code></pre>
+<pre class="r"><code>collect_metrics(xgb_res)</code></pre>
+<pre><code>## # A tibble: 60 x 13
+##     mtry trees min_n tree_depth learn_rate loss_reduction sample_size .metric
+##    &lt;int&gt; &lt;int&gt; &lt;int&gt;      &lt;int&gt;      &lt;dbl&gt;          &lt;dbl&gt;       &lt;dbl&gt; &lt;chr&gt;  
+##  1    11   197    23          1   2.46e- 4   0.0224             0.572 accura…
+##  2    11   197    23          1   2.46e- 4   0.0224             0.572 roc_auc
+##  3     3  1064     2          2   1.39e- 2   0.00000292         0.920 accura…
+##  4     3  1064     2          2   1.39e- 2   0.00000292         0.920 roc_auc
+##  5     8   642    10          2   1.90e-10   0.0000000318       0.177 accura…
+##  6     8   642    10          2   1.90e-10   0.0000000318       0.177 roc_auc
+##  7    10   111    14          3   1.08e- 3   0.0000639          0.155 accura…
+##  8    10   111    14          3   1.08e- 3   0.0000639          0.155 roc_auc
+##  9     9   269    27          3   5.28e- 6   0.000000380        0.317 accura…
+## 10     9   269    27          3   5.28e- 6   0.000000380        0.317 roc_auc
+## # … with 50 more rows, and 5 more variables: .estimator &lt;chr&gt;, mean &lt;dbl&gt;,
+## #   n &lt;int&gt;, std_err &lt;dbl&gt;, .config &lt;chr&gt;</code></pre>
+<pre class="r"><code>show_best(xgb_res, &quot;roc_auc&quot;)</code></pre>
+<pre><code>## # A tibble: 5 x 13
+##    mtry trees min_n tree_depth learn_rate loss_reduction sample_size .metric
+##   &lt;int&gt; &lt;int&gt; &lt;int&gt;      &lt;int&gt;      &lt;dbl&gt;          &lt;dbl&gt;       &lt;dbl&gt; &lt;chr&gt;  
+## 1    14   931    11          4    3.42e-3     0.348            0.501 roc_auc
+## 2    13  1924    15          8    3.14e-3     0.00725          0.458 roc_auc
+## 3     3  1064     2          2    1.39e-2     0.00000292       0.920 roc_auc
+## 4     4  1338    37          6    3.80e-7     0.0000164        0.596 roc_auc
+## 5     4   496    38          9    4.14e-7     0.0629           0.411 roc_auc
+## # … with 5 more variables: .estimator &lt;chr&gt;, mean &lt;dbl&gt;, n &lt;int&gt;,
+## #   std_err &lt;dbl&gt;, .config &lt;chr&gt;</code></pre>
+<pre class="r"><code>best_roc &lt;- select_best(xgb_res, &quot;roc_auc&quot;)</code></pre>
+<pre class="r"><code>final_xgb &lt;- finalize_workflow(
+  bracket_wflow,
+  best_roc
+)
+
+final_xgb</code></pre>
+<pre><code>## ══ Workflow ════════════════════════════════════════════════════════════════════
+## Preprocessor: Recipe
+## Model: boost_tree()
+## 
+## ── Preprocessor ────────────────────────────────────────────────────────────────
+## 0 Recipe Steps
+## 
+## ── Model ───────────────────────────────────────────────────────────────────────
+## Boosted Tree Model Specification (classification)
+## 
+## Main Arguments:
+##   mtry = 14
+##   trees = 931
+##   min_n = 11
+##   tree_depth = 4
+##   learn_rate = 0.00342416300076959
+##   loss_reduction = 0.34847390041288
+##   sample_size = 0.500581099756528
+## 
+## Engine-Specific Arguments:
+##   nthread = cores
+## 
+## Computational engine: xgboost</code></pre>
+<pre class="r"><code>xg_fit &lt;- 
+  final_xgb %&gt;% 
+  fit(data = bracket_train)</code></pre>
+<pre><code>## [23:31:11] WARNING: amalgamation/../src/learner.cc:1061: Starting in XGBoost 1.3.0, the default evaluation metric used with the objective &#39;binary:logistic&#39; was changed from &#39;error&#39; to &#39;logloss&#39;. Explicitly set eval_metric if you&#39;d like to restore the old behavior.</code></pre>
+<pre class="r"><code>trainresults &lt;- bracket_train %&gt;%
+  bind_cols(predict(xg_fit, bracket_train))</code></pre>
+<pre class="r"><code>metrics(trainresults, truth = Outcome, estimate = .pred_class)</code></pre>
+<pre><code>## # A tibble: 2 x 3
+##   .metric  .estimator .estimate
+##   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
+## 1 accuracy binary         0.714
+## 2 kap      binary         0.428</code></pre>
+<pre class="r"><code>testresults &lt;- bracket_test %&gt;%
+  bind_cols(predict(xg_fit, bracket_test))</code></pre>
+<pre class="r"><code>metrics(testresults, truth = Outcome, estimate = .pred_class)</code></pre>
+<pre><code>## # A tibble: 2 x 3
+##   .metric  .estimator .estimate
+##   &lt;chr&gt;    &lt;chr&gt;          &lt;dbl&gt;
+## 1 accuracy binary         0.677
+## 2 kap      binary         0.354</code></pre>
+<p>Play In Games:</p>
+<p>This is when we finally begin to predict some games. The first few games we are putting to the test are the “First Four In” games which are all called play in games. Two of the winners will become 11 seeds and the otehr two winners will become 16 seeds, ouch.</p>
+<p>In the next four chunks of code we will set the matchups as well as tell the code and recipe how we want the games to be predicted.</p>
+<pre class="r"><code>playin &lt;- tibble(
+  Team=&quot;Norfolk State&quot;,
+  Opponent=&quot;Appalachian State&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Wichita State&quot;,
+  Opponent=&quot;Drake&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Mount St. Mary&#39;s&quot;,
+  Opponent=&quot;Texas Southern&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Michigan State&quot;,
+  Opponent=&quot;UCLA&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+)</code></pre>
+<pre class="r"><code>playingames &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(playin)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>playingames &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(playingames, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())</code></pre>
+<pre class="r"><code>playinround &lt;- xg_fit %&gt;% predict(new_data = playingames) %&gt;%
+  bind_cols(playingames) 
+
+playinround &lt;- xg_fit %&gt;% predict(new_data = playinround, type=&quot;prob&quot;) %&gt;%
+  bind_cols(playinround)</code></pre>
+<pre class="r"><code>playinround %&gt;% select(Team, .pred_class, Opponent, .pred_L) %&gt;% kable() %&gt;% kable_styling(bootstrap_options = c(&quot;striped&quot;, &quot;condensed&quot;))</code></pre>
+<table class="table table-striped table-condensed" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:left;">
+.pred_class
+</th>
+<th style="text-align:left;">
+Opponent
+</th>
+<th style="text-align:right;">
+.pred_L
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Norfolk State
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Appalachian State
+</td>
+<td style="text-align:right;">
+0.4683126
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Wichita State
+</td>
+<td style="text-align:left;">
+L
+</td>
+<td style="text-align:left;">
+Drake
+</td>
+<td style="text-align:right;">
+0.5810817
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Mount St. Mary’s
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Texas Southern
+</td>
+<td style="text-align:right;">
+0.4111388
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Michigan State
+</td>
+<td style="text-align:left;">
+L
+</td>
+<td style="text-align:left;">
+UCLA
+</td>
+<td style="text-align:right;">
+0.6138192
+</td>
+</tr>
+</tbody>
+</table>
+<p>My model predicted that Norfolk State, Drake, Mount St.Mary’s, and UCLA would be the winners and move on to play in the Big Dance.</p>
+<p>Now that we have the play in games complete we can start going section by section until we have a section winner.</p>
+<p>The code for each section is the exact same we just have to change the names of the teams based on the bracket we are working on. As an example I will show the South Regional Bracket.</p>
+<div id="south-regional" class="section level2">
+<h2>SOUTH REGIONAL</h2>
+<p>To start we fill the match-ups in our tibble so that the code can begin the predictions. The First chunk of code will represent the games played in the round of 64.</p>
+<pre class="r"><code>south &lt;- tibble(
+  Team=&quot;Baylor&quot;,
+  Opponent=&quot;Hartford&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;North Carolina&quot;,
+  Opponent=&quot;Wisconsin&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Villanova&quot;,
+  Opponent=&quot;Winthrop&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Purdue&quot;,
+  Opponent=&quot;North Texas&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Texas Tech&quot;,
+  Opponent=&quot;Utah State&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Arkansas&quot;,
+  Opponent=&quot;Colgate&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Florida&quot;,
+  Opponent=&quot;Virginia Tech&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Ohio State&quot;,
+  Opponent=&quot;Oral Roberts&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) </code></pre>
+<pre class="r"><code>south &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(south)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>south &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(south, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())</code></pre>
+<pre class="r"><code>southregional &lt;- xg_fit %&gt;% predict(new_data = south) %&gt;%
+  bind_cols(south) 
+
+southregional &lt;- xg_fit %&gt;% predict(new_data = southregional, type=&quot;prob&quot;) %&gt;%
+  bind_cols(southregional)</code></pre>
+<pre class="r"><code>southregional %&gt;% select(Team, .pred_class, Opponent, .pred_W) %&gt;% kable() %&gt;% kable_styling(bootstrap_options = c(&quot;striped&quot;, &quot;condensed&quot;))</code></pre>
+<table class="table table-striped table-condensed" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:left;">
+.pred_class
+</th>
+<th style="text-align:left;">
+Opponent
+</th>
+<th style="text-align:right;">
+.pred_W
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Arkansas
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Colgate
+</td>
+<td style="text-align:right;">
+0.5199320
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Baylor
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Hartford
+</td>
+<td style="text-align:right;">
+0.8523981
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Purdue
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+North Texas
+</td>
+<td style="text-align:right;">
+0.5461208
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Ohio State
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Oral Roberts
+</td>
+<td style="text-align:right;">
+0.7499303
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Texas Tech
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Utah State
+</td>
+<td style="text-align:right;">
+0.5637733
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Florida
+</td>
+<td style="text-align:left;">
+L
+</td>
+<td style="text-align:left;">
+Virginia Tech
+</td>
+<td style="text-align:right;">
+0.4527293
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Villanova
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Winthrop
+</td>
+<td style="text-align:right;">
+0.5794861
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+North Carolina
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Wisconsin
+</td>
+<td style="text-align:right;">
+0.5080451
+</td>
+</tr>
+</tbody>
+</table>
+<p>Using kable we can see the winners of the first round that our model has predicted. Our model only predicted a single upset, Virginia Tech over Florida.</p>
+<p>Moving on we take those winners and match them up in the round of 32 games. We again run the code and will see who prevails.</p>
+<pre class="r"><code>southsecond &lt;- tibble(
+  Team=&quot;Baylor&quot;,
+  Opponent=&quot;North Carolina&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Villanova&quot;,
+  Opponent=&quot;Purdue&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Texas Tech&quot;,
+  Opponent=&quot;Arkansas&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Virginia Tech&quot;,
+  Opponent=&quot;Ohio State&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+)</code></pre>
+<pre class="r"><code>southsecondround &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(southsecond)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>southsecondround &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(southsecondround, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+southregionalsecond &lt;- xg_fit %&gt;% predict(new_data = southsecondround) %&gt;%
+  bind_cols(southsecondround) 
+
+southregionalsecond &lt;- xg_fit %&gt;% predict(new_data = southregionalsecond, type=&quot;prob&quot;) %&gt;%
+  bind_cols(southregionalsecond)</code></pre>
+<pre class="r"><code>southregionalsecond %&gt;% select(Team, .pred_class, Opponent, .pred_W) %&gt;% kable() %&gt;% kable_styling(bootstrap_options = c(&quot;striped&quot;, &quot;condensed&quot;))</code></pre>
+<table class="table table-striped table-condensed" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:left;">
+.pred_class
+</th>
+<th style="text-align:left;">
+Opponent
+</th>
+<th style="text-align:right;">
+.pred_W
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Texas Tech
+</td>
+<td style="text-align:left;">
+L
+</td>
+<td style="text-align:left;">
+Arkansas
+</td>
+<td style="text-align:right;">
+0.4982447
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Baylor
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+North Carolina
+</td>
+<td style="text-align:right;">
+0.6660088
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Virginia Tech
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Ohio State
+</td>
+<td style="text-align:right;">
+0.5842025
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Villanova
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Purdue
+</td>
+<td style="text-align:right;">
+0.5407417
+</td>
+</tr>
+</tbody>
+</table>
+<p>Our model feels confident that Virginia Tech is going to upset #2 seed Ohio State as well as the #5 seed Villanova over the #4 seed Purdue.</p>
+<pre class="r"><code>souththird &lt;- tibble(
+  Team=&quot;Virginia Tech&quot;,
+  Opponent=&quot;Arkansas&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Villanova&quot;,
+  Opponent=&quot;Baylor&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) </code></pre>
+<pre class="r"><code>souththirdround &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(souththird)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>souththirdround &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(souththirdround, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+southregionalthird &lt;- xg_fit %&gt;% predict(new_data = souththirdround) %&gt;%
+  bind_cols(souththirdround) 
+
+southregionalthird &lt;- xg_fit %&gt;% predict(new_data = southregionalthird, type=&quot;prob&quot;) %&gt;%
+  bind_cols(southregionalthird)</code></pre>
+<pre class="r"><code>southregionalthird %&gt;% select(Team, .pred_class, Opponent, .pred_W) %&gt;% kable() %&gt;% kable_styling(bootstrap_options = c(&quot;striped&quot;, &quot;condensed&quot;))</code></pre>
+<table class="table table-striped table-condensed" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:left;">
+.pred_class
+</th>
+<th style="text-align:left;">
+Opponent
+</th>
+<th style="text-align:right;">
+.pred_W
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Virginia Tech
+</td>
+<td style="text-align:left;">
+L
+</td>
+<td style="text-align:left;">
+Arkansas
+</td>
+<td style="text-align:right;">
+0.4213435
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Villanova
+</td>
+<td style="text-align:left;">
+L
+</td>
+<td style="text-align:left;">
+Baylor
+</td>
+<td style="text-align:right;">
+0.4173416
+</td>
+</tr>
+</tbody>
+</table>
+<p>This last section predicted the games in the sweet sixteen. Our model gives us the #1 seed Baylor taking on the #3 seed Arkansas.These two teams moved on to be in the elite eight of the South Region.</p>
+<p>We will now take those two teams and predict the winner coming out of the South.</p>
+<pre class="r"><code>southfinal &lt;- tibble(
+  Team=&quot;Baylor&quot;,
+  Opponent=&quot;Arkansas&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) </code></pre>
+<pre class="r"><code>southfinalround &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(southfinal)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>southfinalround &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(southfinalround, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+southregionalfinal &lt;- xg_fit %&gt;% predict(new_data = southfinalround) %&gt;%
+  bind_cols(southfinalround) 
+
+southregionalfinal &lt;- xg_fit %&gt;% predict(new_data = southregionalfinal, type=&quot;prob&quot;) %&gt;%
+  bind_cols(southregionalfinal)</code></pre>
+<pre class="r"><code>southregionalfinal %&gt;% select(Team, .pred_class, Opponent, .pred_W) %&gt;% kable() %&gt;% kable_styling(bootstrap_options = c(&quot;striped&quot;, &quot;condensed&quot;))</code></pre>
+<table class="table table-striped table-condensed" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:left;">
+.pred_class
+</th>
+<th style="text-align:left;">
+Opponent
+</th>
+<th style="text-align:right;">
+.pred_W
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Baylor
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Arkansas
+</td>
+<td style="text-align:right;">
+0.5787569
+</td>
+</tr>
+</tbody>
+</table>
+<p>There it is, our model predicts that Baylor, the best three point shooting team in the country, will be the South Regional winner, moving on to the Final Four.</p>
+<p>With the completion of the South region you can now take the code used and replace the team names for the West, East, and Midwest Regionals.</p>
+<p>Skipping ahead a bit, we now have the four teams that our model predicts to make it to the Final Four, Gonzaga, BYU (Brigham Young), Baylor, and San Diego State.</p>
+</div>
+<div id="final-four" class="section level2">
+<h2>Final Four</h2>
+<pre class="r"><code>finalfour &lt;- tibble(
+  Team=&quot;Gonzaga&quot;,
+  Opponent=&quot;Brigham Young&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) %&gt;% add_row(
+  Team=&quot;Baylor&quot;,
+  Opponent=&quot;San Diego State&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) </code></pre>
+<pre class="r"><code>finalfourround &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(finalfour)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>finalfourround &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(finalfourround, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+finalfourpreds &lt;- xg_fit %&gt;% predict(new_data = finalfourround) %&gt;%
+  bind_cols(finalfourround) 
+
+finalfourpreds &lt;- xg_fit %&gt;% predict(new_data = finalfourpreds, type=&quot;prob&quot;) %&gt;%
+  bind_cols(finalfourpreds)</code></pre>
+<pre class="r"><code>finalfourpreds %&gt;% select(Team, .pred_class, Opponent, .pred_W) %&gt;% kable() %&gt;% kable_styling(bootstrap_options = c(&quot;striped&quot;, &quot;condensed&quot;))</code></pre>
+<table class="table table-striped table-condensed" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:left;">
+.pred_class
+</th>
+<th style="text-align:left;">
+Opponent
+</th>
+<th style="text-align:right;">
+.pred_W
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Gonzaga
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Brigham Young
+</td>
+<td style="text-align:right;">
+0.6307899
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Baylor
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+San Diego State
+</td>
+<td style="text-align:right;">
+0.5731919
+</td>
+</tr>
+</tbody>
+</table>
+<p>The model predicts that the finals matchup is set between the Bulldogs of Gonzaga and the Bears of Baylor. The final step is to add these two teams to one final tibble and run the code. Here goes nothing.</p>
+</div>
+<div id="final" class="section level2">
+<h2>Final</h2>
+<pre class="r"><code>final &lt;- tibble(
+  Team=&quot;Gonzaga&quot;,
+  Opponent=&quot;Baylor&quot;,
+  Date = as.Date(&quot;2021-03-19&quot;)
+) </code></pre>
+<pre class="r"><code>champround &lt;- selectedgames %&gt;% group_by(Team) %&gt;% filter(Date == max(Date), Season == &quot;2020-2021&quot;) %&gt;% select(-Date, -Opponent, -Outcome) %&gt;% right_join(final)</code></pre>
+<pre><code>## Joining, by = &quot;Team&quot;</code></pre>
+<pre class="r"><code>champround &lt;- opponentgames %&gt;% group_by(Opponent) %&gt;% filter(Date == max(Date)) %&gt;% ungroup()  %&gt;% select(-Season, -Date, -Outcome) %&gt;% right_join(champround, by=c(&quot;Opponent&quot;)) %&gt;% select(Team, everything())
+
+champpreds &lt;- xg_fit %&gt;% predict(new_data = champround) %&gt;%
+  bind_cols(champround) 
+
+champpreds &lt;- xg_fit %&gt;% predict(new_data = champpreds, type=&quot;prob&quot;) %&gt;%
+  bind_cols(champpreds)</code></pre>
+<pre class="r"><code>champpreds %&gt;% select(Team, .pred_class, Opponent, .pred_W) %&gt;% kable() %&gt;% kable_styling(bootstrap_options = c(&quot;striped&quot;, &quot;condensed&quot;))</code></pre>
+<table class="table table-striped table-condensed" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Team
+</th>
+<th style="text-align:left;">
+.pred_class
+</th>
+<th style="text-align:left;">
+Opponent
+</th>
+<th style="text-align:right;">
+.pred_W
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Gonzaga
+</td>
+<td style="text-align:left;">
+W
+</td>
+<td style="text-align:left;">
+Baylor
+</td>
+<td style="text-align:right;">
+0.5927876
+</td>
+</tr>
+</tbody>
+</table>
+<p>There you have it, your 2021 NCAA Champions, the Gonzaaga Bulldogs, led by projected lottery draft pick Jalen Sugss. Although the model predicted some interesting upsets or winners in general, I don’t think predicting Gonzaga to be the tourney champs is that for off from what may happen.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+
+    
+  </body>
+</html>
+

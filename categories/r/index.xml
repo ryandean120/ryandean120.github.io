@@ -6,16 +6,15 @@
     <description>Recent content in R on Ryan Dean&#39;s Github Site</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 01 Dec 2020 21:13:14 -0500</lastBuildDate><atom:link href="/categories/r/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 22 Mar 2021 00:00:00 +0000</lastBuildDate><atom:link href="/categories/r/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Hello R Markdown</title>
-      <link>/2020/12/01/hello-r-markdown/</link>
-      <pubDate>Tue, 01 Dec 2020 21:13:14 -0500</pubDate>
+      <title>March Sadness</title>
+      <link>/2021/03/22/march-sadness/</link>
+      <pubDate>Mon, 22 Mar 2021 00:00:00 +0000</pubDate>
       
-      <guid>/2020/12/01/hello-r-markdown/</guid>
-      <description>R Markdown This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see http://rmarkdown.rstudio.com.
-You can embed an R code chunk like this:
-summary(cars) ## speed dist ## Min. : 4.0 Min. : 2.00 ## 1st Qu.:12.0 1st Qu.: 26.00 ## Median :15.0 Median : 36.00 ## Mean :15.4 Mean : 42.</description>
+      <guid>/2021/03/22/march-sadness/</guid>
+      <description>If you’ve ever filled out a March Madness bracket, you can truly understand the realest definition of pain, insert Steven A. Smith “Pain” image here.
+This year however we are going in with a predictive method as to who is going to win. There is no guarentee that the method will prevail and more likely than not, it won’t. If I were able to perfectly predict every game and happen to win the million dollar prize I WILL be naming a classroom after myself.</description>
     </item>
     
   </channel>
